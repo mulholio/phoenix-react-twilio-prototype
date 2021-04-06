@@ -4,53 +4,76 @@ import { Socket } from 'phoenix';
 
 const WEB_SOCKET_URL = 'ws://localhost:4000/socket';
 
-const COORD_MOVE_MSG = 'coord_move';
+const Msgs = {
+  COORD_MOVE: 'coord_move',
+}
 
-
-function App() {
-  // useSocket
+function useSocket() {
   const [socket, setSocket] = useState();
   useEffect(() => {
     const socket = new Socket(WEB_SOCKET_URL, {params: {}})
     socket.connect();
     setSocket(socket);
   }, []);
+  return socket;
+}
 
-
-  // useChannel
+function useChannel(socket, topic) {
   const [channel, setChannel] = useState();
   useEffect(() => {
     if (!socket) return
-    const newChannel = socket.channel("room:jazz", {});
-    console.log('new channel', newChannel);
+    const newChannel = socket.channel(topic, {});
     newChannel.join()
-      .receive("ok", resp => {
-        console.log("Joined successfully", resp)
+      .receive("ok", _resp => {
         setChannel(newChannel);
       })
       .receive("error", resp => {
-        console.log("Unable to join", resp)
+        console.error("Unable to join", resp)
       })
     return () => newChannel.leave();
-  }, [setChannel, socket]);
+  }, [setChannel, socket, topic]);
+  return channel
+}
 
-  const move = () => {
-    console.log('channel', channel)
-    channel && channel.push(COORD_MOVE_MSG, { coords: { x: 20, y: 20 }, player_id: 1 })
-  }
-
+function useMessage(channel, cb) { 
   // useMessage
   useEffect(() => {
     if (!channel) return;
-    channel.on(COORD_MOVE_MSG, payload => {
-      console.log('payload', payload)
-    });
-  }, [channel]);
+    channel.on(Msgs.COORD_MOVE, cb);
+  }, [channel, cb]);
+}
+
+function App() {
+  const socket = useSocket();
+  const channel = useChannel(socket, "room:jazz");
+
+  useMessage(channel, payload => console.log('payload', payload));
+
+  const [playerId, setPlayerId] = useState();
+  const handleSetId = (e) => {
+    setPlayerId(e.currentTarget.value)
+  }
+
+  const move = () => {
+    if (!channel) return;
+    channel
+      .push(Msgs.COORD_MOVE, {
+        coords: { x: 20, y: 20 },
+        player_id: playerId
+      })
+  }
+
 
   return (
     <div className="App">
       <h1>Talk 'n' chat!</h1>
+      <div>
+      <label>
+        Player to move
+        <input type="number" onChange={handleSetId} />
+      </label>
       <button onClick={move}>Move</button>
+      </div>
     </div>
   );
 }
