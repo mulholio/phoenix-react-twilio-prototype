@@ -35,31 +35,40 @@ function useChannel(socket, topic) {
   return channel
 }
 
-function useMessage(channel, cb) { 
-  // useMessage
+function useMessage(channel, msgName, cb) { 
   useEffect(() => {
     if (!channel) return;
-    channel.on(Msgs.COORD_MOVE, cb);
-  }, [channel, cb]);
+    channel.on(msgName, cb);
+  }, [channel, msgName, cb]);
 }
+
+// User {
+//   id
+//   coords
+// }
 
 function App() {
   const socket = useSocket();
   const channel = useChannel(socket, "room:jazz");
 
-  useMessage(channel, payload => console.log('payload', payload));
+  const [currentUserId, setCurrentUserId] = useState();
+  const [users, setUsers] = useState({});
 
-  const [playerId, setPlayerId] = useState();
-  const handleSetId = (e) => {
-    setPlayerId(e.currentTarget.value)
-  }
+  useMessage(
+    channel,
+    Msgs.COORD_MOVE,
+    ({ user_id, coords }) => {
+      setUsers(users => ({ ...users, [user_id]: { coords }}));
+    }
+  );
+  console.log(users)
 
   const move = () => {
     if (!channel) return;
     channel
       .push(Msgs.COORD_MOVE, {
         coords: { x: 20, y: 20 },
-        player_id: playerId
+        user_id: currentUserId
       })
   }
 
@@ -68,11 +77,18 @@ function App() {
     <div className="App">
       <h1>Talk 'n' chat!</h1>
       <div>
-      <label>
-        Player to move
-        <input type="number" onChange={handleSetId} />
-      </label>
-      <button onClick={move}>Move</button>
+        <label>Enter user id to "sign in" or change user</label>
+        <input type="number" value={currentUserId} onChange={e => setCurrentUserId(e.currentTarget.value)} />
+      </div>
+      <div>
+        <button onClick={move}>Move</button>
+      </div>
+      <div>
+        {Object.entries(users).map(([userId, {coords: {x, y}}]) => console.log('x', x) || (
+          <p>
+            {userId}: (<span>{x}</span>, <span>{y}</span>)
+          </p>
+        ))}
       </div>
     </div>
   );
