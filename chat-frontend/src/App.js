@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import './App.css';
 import { Socket } from 'phoenix';
+import _ from 'lodash';
 
 const WEB_SOCKET_URL = 'ws://localhost:4000/socket';
 
@@ -42,10 +43,7 @@ function useMessage(channel, msgName, cb) {
   }, [channel, msgName, cb]);
 }
 
-// User {
-//   id
-//   coords
-// }
+// TODO grab userid from url param
 
 function App() {
   const socket = useSocket();
@@ -54,6 +52,7 @@ function App() {
   const [currentUserId, setCurrentUserId] = useState();
   const [users, setUsers] = useState({});
 
+  // TODO perf setup where we calculate current user separately
   useMessage(
     channel,
     Msgs.COORD_MOVE,
@@ -61,16 +60,42 @@ function App() {
       setUsers(users => ({ ...users, [user_id]: { coords }}));
     }
   );
-  console.log(users)
 
-  const move = () => {
+  const move = useCallback(_.throttle((coords) => {
+    console.log('move');
     if (!channel) return;
     channel
       .push(Msgs.COORD_MOVE, {
-        coords: { x: 20, y: 20 },
+        coords,
         user_id: currentUserId
       })
-  }
+  }, 500), [currentUserId, channel]);
+
+  useEffect(() => {
+    const handler = ({ key }) => {
+      console.log('handler');
+      const currentUser = users[currentUserId];
+      const { coords } = currentUser || { coords: { x: 0, y: 0 }};
+      switch (key) {
+        case 'j':
+          move({ ...coords, y: coords.y - 1 });
+          break;
+        case 'k':
+          move({ ...coords, y: coords.y + 1 });
+          break;
+        case 'h':
+          move({ ...coords, x: coords.x - 1 });
+          break;
+        case 'l':
+          move({ ...coords, x: coords.x + 1 });
+          break;
+        default:
+          return
+      }
+    }
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [move, currentUserId, users]);
 
 
   return (
@@ -80,18 +105,19 @@ function App() {
         <label>Enter user id to "sign in" or change user</label>
         <input type="number" value={currentUserId} onChange={e => setCurrentUserId(e.currentTarget.value)} />
       </div>
-      <div>
-        <button onClick={move}>Move</button>
-      </div>
-      <div>
-        {Object.entries(users).map(([userId, {coords: {x, y}}]) => console.log('x', x) || (
-          <p>
-            {userId}: (<span>{x}</span>, <span>{y}</span>)
-          </p>
-        ))}
-      </div>
+      <Map users={users} />
     </div>
   );
 }
+
+const Map = ({ users }) => (
+  <div>
+    {Object.entries(users).map(([userId, {coords: {x, y}}]) => (
+      <p>
+        {userId}: (<span>{x}</span>, <span>{y}</span>)
+      </p>
+    ))}
+  </div>
+)
 
 export default App;
