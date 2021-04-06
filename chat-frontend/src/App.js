@@ -52,30 +52,33 @@ function App() {
   const [currentUserId, setCurrentUserId] = useState();
   const [users, setUsers] = useState({});
 
-  // TODO perf setup where we calculate current user separately
   useMessage(
     channel,
     Msgs.COORD_MOVE,
     ({ user_id, coords }) => {
+      if (user_id === currentUserId) return;
       setUsers(users => ({ ...users, [user_id]: { coords }}));
     }
   );
 
-  const move = useCallback(_.throttle((coords) => {
-    console.log('move');
-    if (!channel) return;
+  const pushUserCoords = useCallback(_.debounce((coords) => {
     channel
       .push(Msgs.COORD_MOVE, {
         coords,
         user_id: currentUserId
       })
-  }, 500), [currentUserId, channel]);
+  }, 1000), [channel, currentUserId])
+
+  const move = useCallback((coords) => {
+    setUsers(users =>
+      ({ ...users, [currentUserId]: { ...users[currentUserId], coords }})
+    );
+    pushUserCoords(coords);
+  }, [currentUserId, pushUserCoords]);
 
   useEffect(() => {
     const handler = ({ key }) => {
-      console.log('handler');
-      const currentUser = users[currentUserId];
-      const { coords } = currentUser || { coords: { x: 0, y: 0 }};
+      const { coords } = users[currentUserId] || { coords: { x: 0, y: 0 }};
       switch (key) {
         case 'j':
           move({ ...coords, y: coords.y - 1 });
@@ -97,7 +100,6 @@ function App() {
     return () => document.removeEventListener('keydown', handler);
   }, [move, currentUserId, users]);
 
-
   return (
     <div className="App">
       <h1>Talk 'n' chat!</h1>
@@ -113,7 +115,7 @@ function App() {
 const Map = ({ users }) => (
   <div>
     {Object.entries(users).map(([userId, {coords: {x, y}}]) => (
-      <p>
+      <p key={userId}>
         {userId}: (<span>{x}</span>, <span>{y}</span>)
       </p>
     ))}
