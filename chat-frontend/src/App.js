@@ -4,6 +4,8 @@ import { Socket } from 'phoenix';
 
 const WEB_SOCKET_URL = 'ws://localhost:4000/socket';
 
+const COORD_MOVE_MSG = 'coord_move';
+
 
 function App() {
   // useSocket
@@ -34,8 +36,16 @@ function App() {
 
   const move = () => {
     console.log('channel', channel)
-    channel && channel.push("coord_move", { coords: { x: 20, y: 20 }})
+    channel && channel.push(COORD_MOVE_MSG, { coords: { x: 20, y: 20 }, player_id: 1 })
   }
+
+  // useMessage
+  useEffect(() => {
+    if (!channel) return;
+    channel.on(COORD_MOVE_MSG, payload => {
+      console.log('payload', payload)
+    });
+  }, [channel]);
 
   return (
     <div className="App">

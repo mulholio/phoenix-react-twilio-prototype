@@ -1,4 +1,4 @@
-defmodule HelloWeb.RoomChannel do
+defmodule ChatBackendWeb.RoomChannel do
   use Phoenix.Channel
 
   def join("room:jazz", _message, socket) do
@@ -7,5 +7,10 @@ defmodule HelloWeb.RoomChannel do
 
   def join("room:" <> _private_room_id, _params, _socket) do
     {:error, %{reason: "unauthorized"}}
+  end
+
+  def handle_in("coord_move", %{"coords" => coords, "player_id" => player_id}, socket) do
+    broadcast!(socket, "coord_move", %{coords: coords, player_id: player_id})
+    {:noreply, socket}
   end
 end
