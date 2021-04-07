@@ -9,8 +9,8 @@ defmodule ChatBackendWeb.RoomChannel do
     {:error, %{reason: "unauthorized"}}
   end
 
-  def handle_in("coord_move", %{"coords" => coords, "player_id" => player_id}, socket) do
-    broadcast!(socket, "coord_move", %{coords: coords, player_id: player_id})
+  def handle_in("coord_move", %{"coords" => coords, "user_id" => user_id}, socket) do
+    broadcast!(socket, "coord_move", %{coords: coords, user_id: user_id})
     {:noreply, socket}
   end
 end
