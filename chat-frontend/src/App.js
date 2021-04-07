@@ -50,8 +50,12 @@ function App() {
   const channel = useChannel(socket, "room:jazz");
 
   const [currentUserId, setCurrentUserId] = useState();
-  const [users, setUsers] = useState({});
+  useEffect(() => {
+    const id = window.location.pathname.slice(1);
+    setCurrentUserId(id);
+  }, []);
 
+  const [users, setUsers] = useState({});
   useMessage(
     channel,
     Msgs.COORD_MOVE,
@@ -81,10 +85,10 @@ function App() {
       const { coords } = users[currentUserId] || { coords: { x: 0, y: 0 }};
       switch (key) {
         case 'j':
-          move({ ...coords, y: coords.y - 1 });
+          move({ ...coords, y: coords.y + 1 });
           break;
         case 'k':
-          move({ ...coords, y: coords.y + 1 });
+          move({ ...coords, y: coords.y - 1 });
           break;
         case 'h':
           move({ ...coords, x: coords.x - 1 });
@@ -104,8 +108,7 @@ function App() {
     <div className="App">
       <h1>Talk 'n' chat!</h1>
       <div>
-        <label>Enter user id to "sign in" or change user</label>
-        <input type="number" value={currentUserId} onChange={e => setCurrentUserId(e.currentTarget.value)} />
+        <p>You are user {currentUserId}</p>
       </div>
       <Map users={users} />
     </div>
@@ -115,9 +118,9 @@ function App() {
 const Map = ({ users }) => (
   <div>
     {Object.entries(users).map(([userId, {coords: {x, y}}]) => (
-      <p key={userId}>
+      <div key={userId} style={{ transform: `translate(${x*5}px, ${y*5}px)`}}>
         {userId}: (<span>{x}</span>, <span>{y}</span>)
-      </p>
+      </div>
     ))}
   </div>
 )
